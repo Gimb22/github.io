@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan zajęć – Ratownictwo Medyczne</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b1726;
+      --card:#0f2238;
+      --cardSoft:#102b45;
+      --ink:#e9f2ff;
+      --muted:#b7c6d9;
+      --accent:#5aa9ff;
+      --success:#32d296;
+      --warning:#ffd166;
+      --purple:#c084fc;
+      --pink:#ff7ab6;
+      --borderSoft: rgba(255,255,255,.12);
+    }
+    html,body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    .container{ max-width:1400px; margin:0 auto; padding:24px 20px 60px; }
+    h1{ margin:.1rem 0 .25rem; font-size:28px; }
+    .subtitle{ margin:.2rem 0 1.2rem; color:var(--muted); }
+
+    .toolbar{
+      display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap:16px;
+      margin: 10px 0 8px;
+    }
+    .toolbar .left{ justify-self:start; }
+    .toolbar .center{ justify-self:center; }
+    .toolbar .right{ justify-self:end; }
+    .btn{
+      background:var(--cardSoft); color:var(--ink); border:1px solid var(--borderSoft);
+      padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:700;
+    }
+    .btn:hover{ filter:brightness(1.05); }
+    .date-input{
+      background:var(--cardSoft); color:var(--ink); border:1px solid var(--borderSoft);
+      padding:10px 12px; border-radius:10px; outline:none;
+    }
+    .week-range{ color:var(--muted); font-weight:700; margin: 8px 0 18px; }
+
+    .day-header{
+      margin:28px 0 14px;
+      padding:10px 14px;
+      background: linear-gradient(90deg, var(--cardSoft), transparent);
+      border-left:4px solid var(--accent);
+      border-radius:8px; font-size:18px; font-weight:800;
+    }
+
+    .lesson-card{
+      width:100%;
+      background: var(--card);
+      border:1px solid rgba(255,255,255,.08);
+      border-left:6px solid var(--accent);
+      border-radius:14px;
+      padding:16px 18px;
+      margin:0 0 14px 0;
+      box-shadow: 0 8px 18px rgba(0,0,0,.25);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .2s ease;
+    }
+    .lesson-card:hover{ transform: translateY(-2px); box-shadow: 0 14px 28px rgba(0,0,0,.32); }
+
+    .header-row{
+      display:flex; gap:14px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .time-chip{
+      background: rgba(90,169,255,.15);
+      color:#bfe0ff;
+      padding:8px 12px; border-radius:999px; font-weight:800; letter-spacing:.2px; font-size:15px;
+      border:1px solid rgba(90,169,255,.35);
+    }
+    .title{ font-size:22px; font-weight:900; color:#eaf2ff; flex:1; min-width:240px; }
+
+    .badges{ display:flex; gap:8px; flex-wrap:wrap; }
+    .badge{
+      padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800; letter-spacing:.3px;
+      border:1px solid var(--borderSoft);
+      color:var(--ink); background: var(--cardSoft);
+    }
+    .badge.success{ background: rgba(50,210,150,.18); border-color:rgba(50,210,150,.38); }
+    .badge.warn{ background: rgba(255,209,102,.18); border-color:rgba(255,209,102,.38); }
+    .badge.purple{ background: rgba(192,132,252,.18); border-color:rgba(192,132,252,.38); }
+    .badge.pink{ background: rgba(255,122,182,.18); border-color:rgba(255,122,182,.38); }
+
+    .sep{ border:none; border-top:1px dashed rgba(255,255,255,.08); margin:10px 0; }
+
+    .grid{
+      display:grid; grid-template-columns: repeat(2, minmax(260px, 1fr));
+      gap:10px 18px; align-items:start;
+    }
+    .item{ display:flex; gap:8px; align-items:flex-start; color:var(--muted); font-size:14px; }
+    .item b{ color:#eaf2ff; font-weight:700; }
+
+    .empty{ color:var(--muted); font-style:italic; padding:10px 0; }
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: 1fr; }
+      .toolbar{ grid-template-columns: 1fr; }
+      .toolbar .left,.toolbar .center,.toolbar .right{ justify-self:stretch; }
+      .btn,.date-input{ width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📅 Plan zajęć – Ratownictwo Medyczne</h1>
+    <div class="subtitle">Turbo-nowoczesny widok tygodnia (Pon–Pt) • pełna szerokość • czyste karty</div>
+
+    <div class="toolbar">
+      <div class="left"><button id="prevBtn" class="btn">⬅️ Poprzedni tydzień</button></div>
+      <div class="center"><input id="datePicker" class="date-input" type="date" /></div>
+      <div class="right"><button id="nextBtn" class="btn">Następny tydzień ➡️</button></div>
+    </div>
+    <div id="weekRange" class="week-range"></div>
+
+    <div id="weekContainer"></div>
+  </div>
+
+  <!-- 1) Załaduj dane (musi zdefiniować: const data = [...] ) -->
+  <script src="plan_data.js"></script>
+
+  <!-- 2) Logika renderująca widok -->
+  <script>
+    // ====== POMOCNICZE ======
+    const dni = ["Poniedziałek","Wtorek","Środa","Czwartek","Piątek"];
+    const parseDate = (s) => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+    const fmtISO = (d) => d.toISOString().slice(0,10);
+    const startOfWeekMon = (d) => { const c = new Date(d); const wd = (c.getDay()+6)%7; c.setDate(c.getDate()-wd); c.setHours(0,0,0,0); return c; };
+    const endOfWeekFri = (d) => { const s = startOfWeekMon(d); const e = new Date(s); e.setDate(s.getDate()+4); e.setHours(23,59,59,999); return e; };
+
+    function accentForGroup(g){
+      const x = (g||"").toLowerCase();
+      if (x.includes("jw1")) return "var(--success)";
+      if (x.includes("s1"))  return "var(--accent)";
+      if (x === "a" || x.includes("grupa a")) return "var(--purple)";
+      if (x === "b" || x.includes("grupa b")) return "var(--pink)";
+      if (x === "1") return "var(--warning)";
+      return "var(--accent)";
+    }
+
+    // ====== RENDER ======
+    const container = document.getElementById('weekContainer');
+    const weekRangeEl = document.getElementById('weekRange');
+    const datePicker = document.getElementById('datePicker');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    // Inicjalna data = minimalna z danych
+    const minDate = (data && data.length)
+      ? data.reduce((a,c)=> a ? (parseDate(c.data) < a ? parseDate(c.data):a) : parseDate(c.data), null)
+      : new Date();
+    const maxDate = (data && data.length)
+      ? data.reduce((a,c)=> a ? (parseDate(c.data) > a ? parseDate(c.data):a) : parseDate(c.data), null)
+      : new Date();
+    let selected = minDate || new Date();
+
+    datePicker.min = fmtISO(minDate || new Date());
+    datePicker.max = fmtISO(maxDate || new Date());
+    datePicker.value = fmtISO(selected);
+
+    function renderWeek(){
+      const s = startOfWeekMon(selected);
+      const e = endOfWeekFri(selected);
+      weekRangeEl.textContent = `Zakres: ${fmtISO(s)} → ${fmtISO(e)}`;
+
+      // Filtrowanie na zakres + tylko Pon–Pt
+      const weekData = (data || [])
+        .map(x => ({...x, dateObj: parseDate(x.data)}))
+        .filter(x => x.dateObj >= s && x.dateObj <= e && dni.includes(x.dzien));
+
+      // Grupowanie po dniu
+      const byDay = {}; dni.forEach(d => byDay[d] = []);
+      weekData.forEach(rec => byDay[rec.dzien].push(rec));
+
+      // Sort w dniu po godzinie start
+      Object.values(byDay).forEach(list => list.sort((a,b)=> (a.start||'').localeCompare(b.start||'')));
+
+      // Render
+      container.innerHTML = '';
+      dni.forEach(dzien => {
+        const dayBox = document.createElement('section');
+        dayBox.innerHTML = `<div class="day-header">${dzien}</div>`;
+        const list = byDay[dzien];
+
+        if (!list.length){
+          const p = document.createElement('div');
+          p.className = 'empty';
+          p.textContent = 'Brak zajęć';
+          dayBox.appendChild(p);
+          container.appendChild(dayBox);
+          return;
+        }
+
+        list.forEach(row => {
+          const accent = accentForGroup(row.grupa);
+          const badges = [];
+          if (row.grupa) badges.push(`<span class="badge" style="border-color:${accent}">${row.grupa}</span>`);
+          if (row.forma) badges.push(`<span class="badge success">${row.forma}</span>`);
+          if (row.uwagi) badges.push(`<span class="badge warn">Uwagi</span>`);
+
+          let leftCol = `
+            <div class="item">📅&nbsp;<b>${row.data || ''}</b></div>
+          `;
+          if (row.miejsce) leftCol += `<div class="item">🏫&nbsp;<b>Miejsce:</b>&nbsp;${row.miejsce}</div>`;
+          if (row.sala) leftCol += `<div class="item">🏠&nbsp;<b>Sala:</b>&nbsp;${row.sala}</div>`;
+
+          let rightCol = ``;
+          if (row.uwagi) rightCol += `<div class="item">📝&nbsp;<b>Uwagi:</b>&nbsp;${row.uwagi}</div>`;
+          if (!rightCol) rightCol = `<div class="item">&nbsp;</div>`;
+
+          const card = document.createElement('article');
+          card.className = 'lesson-card';
+          card.style.borderLeftColor = accent;
+          card.innerHTML = `
+            <div class="header-row">
+              <div class="time-chip">🕒 ${row.start || ''} – ${row.end || ''}</div>
+              <div class="title">${row.przedmiot || ''}</div>
+              <div class="badges">${badges.join('')}</div>
+            </div>
+            <hr class="sep"/>
+            <div class="grid">
+              <div>${leftCol}</div>
+              <div>${rightCol}</div>
+            </div>
+          `;
+          dayBox.appendChild(card);
+        });
+
+        container.appendChild(dayBox);
+      });
+    }
+
+    // Nawigacja
+    prevBtn.addEventListener('click', () => { selected = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate() - 7); datePicker.value = fmtISO(selected); renderWeek(); });
+    nextBtn.addEventListener('click', () => { selected = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate() + 7); datePicker.value = fmtISO(selected); renderWeek(); });
+    datePicker.addEventListener('change', (e)=> { selected = new Date(e.target.value); renderWeek(); });
+
+    // Start
+    renderWeek();
+  </script>
+</body>
+</html>
